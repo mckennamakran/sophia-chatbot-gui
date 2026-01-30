@@ -1,343 +1,358 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import os
 import csv
+from datetime import datetime
+import json
 
-# =========================================================
-# PAGE CONFIG
-# =========================================================
+# ==================== PAGE CONFIGURATION ====================
 st.set_page_config(
-    page_title="Sophia — Relapse Prevention Assistant",
-    page_icon="🌸",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    page_title="Sophia | Compassionate Relapse Prevention",
+    page_icon="❤️",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# =========================================================
-# DARK MODE THEME - BLACK BACKGROUND, PINK ACCENTS ONLY
-# =========================================================
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+# ==================== UPDATED DARK THEME CSS WITH HOT/BARBIE PINK ACCENTS ====================
+st.markdown("""
+<style>
+    /* Professional Dark Theme with Hot/Barbie Pink Accents */
+    :root {
+        --bg-primary: #0A0E17;
+        --bg-secondary: #121826;
+        --bg-card: #1A1F2E;
+        --bg-input: #2D3448;
+        --border: #3A425C;
+        --text-primary: #FFFFFF;
+        --text-secondary: #94A3B8;
+        --accent-primary: #FF69B4;
+        --accent-secondary: #FF1493;
+        --accent-light: #FFB6C1;
+        --accent-hot: #FF007F;
+        --accent-barbie: #FF00A0;
+        --accent-neon: #FF00FF;
+        --accent-slider: #FF85B3;
+        --success: #FF69B4;
+        --warning: #FFB6C1;
+        --danger: #FF007F;
+        --info: #FF00A0;
+    }
     
-    * {
+    /* Main App */
+    .stApp {
+        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        color: var(--text-primary);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    .stApp {
-        background-color: #000000 !important;
-        color: #ffffff;
-    }
-    
-    /* Main containers */
-    .main > div {
-        background-color: #000000;
-    }
-    
-    /* Headers with pink gradient */
-    h1, h2, h3, h4, h5, h6 {
-        color: #ffffff;
-        font-weight: 600;
+    /* Headers */
+    h1, h2, h3, h4 {
+        color: var(--text-primary) !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.025em;
     }
     
     h1 {
-        background: linear-gradient(90deg, #E0218A 0%, #FF6EC7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--accent-barbie) !important;
+        font-size: 2.8rem !important;
+        margin-bottom: 1rem !important;
     }
     
-    /* Text color */
-    p, div, span {
-        color: #ffffff !important;
+    h2 {
+        color: var(--accent-light) !important;
+        font-size: 1.8rem !important;
+        margin-top: 2rem !important;
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--accent-barbie);
     }
     
-    /* Input fields - dark with pink border */
-    .stTextInput>div>div>input,
-    .stNumberInput>div>div>input,
-    .stSelectbox>div>div>select {
-        background-color: #111111 !important;
-        color: #ffffff !important;
-        border: 2px solid #333333 !important;
-        border-radius: 10px;
-        padding: 0.75em;
+    h3 {
+        color: var(--text-primary) !important;
+        font-size: 1.4rem !important;
     }
     
-    .stTextInput>div>div>input:focus,
-    .stNumberInput>div>div>input:focus,
-    .stSelectbox>div>div>select:focus {
-        border-color: #E0218A !important;
-        box-shadow: 0 0 0 2px rgba(224, 33, 138, 0.2) !important;
+    /* Sidebar */
+    .css-1d391kg {
+        background: var(--bg-secondary) !important;
+        border-right: 1px solid var(--border) !important;
     }
     
-    /* Multi-select styling - PINK */
-    .stMultiSelect > div > div {
-        background-color: #111111 !important;
-        border-color: #333333 !important;
-        color: #ffffff !important;
-    }
-    
-    .stMultiSelect > div > div:hover {
-        border-color: #E0218A !important;
-    }
-    
-    /* Selected items in multiselect - PINK */
-    .stMultiSelect [data-baseweb="tag"] {
-        background-color: rgba(224, 33, 138, 0.2) !important;
-        color: #FF6EC7 !important;
-        border-color: #E0218A !important;
-    }
-    
-    /* Pink buttons */
-    .stButton>button {
-        background: linear-gradient(135deg, #E0218A 0%, #c91b78 100%);
-        color: white !important;
+    /* Cards */
+    .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 0.7em 1.4em;
-        border: none;
-        font-size: 16px;
-        font-weight: 500;
-        margin-top: 10px;
+        padding: 24px;
+        margin: 16px 0;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(224, 33, 138, 0.3);
+    }
+    
+    .card:hover {
+        border-color: var(--accent-barbie);
+        box-shadow: 0 8px 32px rgba(255, 0, 160, 0.15);
+    }
+    
+    /* ALL INPUT FIELDS - Pink Border (ALL Inputs) */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > div,
+    .stTextArea > div > div > textarea,
+    .stMultiSelect > div > div > div {
+        border-color: var(--accent-hot) !important;
+        border-width: 1px !important;
+    }
+    
+    /* Input fields styling */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > div,
+    .stTextArea > div > div > textarea {
+        background: var(--bg-input) !important;
+        color: var(--text-primary) !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+    }
+    
+    /* Input fields on focus - Hot Pink Border */
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > div[data-baseweb="select"]:focus-within,
+    .stTextArea > div > div > textarea:focus,
+    .stMultiSelect > div > div > div:focus-within {
+        border-color: var(--accent-hot) !important;
+        box-shadow: 0 0 0 1px var(--accent-hot) !important;
+    }
+    
+    /* MultiSelect specific styling */
+    .stMultiSelect > div > div > div {
+        background: var(--bg-input) !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Selectbox specific styling - Remove red background */
+    .stSelectbox > div > div > div > div > div {
+        color: var(--text-primary) !important;
+    }
+    
+    .stSelectbox [data-baseweb="select"] > div {
+        color: var(--text-primary) !important;
+        background-color: var(--bg-input) !important;
+    }
+    
+    /* Buttons - Hot Pink */
+    .stButton > button {
+        background: var(--accent-hot) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stButton > button:hover {
+        background: var(--accent-barbie) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(255, 0, 160, 0.3) !important;
+    }
+    
+    /* Sliders - Lighter Pink Track */
+    .stSlider > div > div > div {
+        background: linear-gradient(90deg, var(--accent-slider), var(--accent-light)) !important;
+    }
+    
+    /* Slider thumb */
+    .stSlider > div > div > div > div > div {
+        background: var(--accent-hot) !important;
+        border-color: var(--accent-hot) !important;
+    }
+    
+    /* Tabs - Hot Pink Active */
+    .stTabs [data-baseweb="tab-list"] {
+        background: var(--bg-card);
+        border-radius: 8px;
+        padding: 4px;
+        gap: 4px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: var(--text-secondary);
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--accent-hot) !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(255, 0, 127, 0.2);
+    }
+    
+    /* Checkboxes and multiselect - Hot Pink when selected */
+    .stCheckbox > div > label > div:first-child {
+        background: var(--accent-hot) !important;
+        border-color: var(--accent-hot) !important;
+    }
+    
+    /* Radio buttons - Hot Pink (not red) */
+    .stRadio > div > label > div:first-child {
+        border-color: var(--accent-hot) !important;
+    }
+    
+    .stRadio > div > label > div:first-child > div {
+        background: var(--accent-hot) !important;
+    }
+    
+    /* Metrics */
+    .stMetric {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid var(--accent-barbie);
+    }
+    
+    /* Progress bars - Hot Pink */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, var(--accent-hot), var(--accent-barbie)) !important;
+    }
+    
+    /* Section Separators */
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-barbie), transparent);
+        margin: 40px 0;
         width: 100%;
     }
     
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(224, 33, 138, 0.4);
-        background: linear-gradient(135deg, #c91b78 0%, #E0218A 100%);
-        color: white;
-    }
-    
-    /* Pink sliders */
-    div[data-baseweb="slider"] > div > div > div > div {
-        background: linear-gradient(90deg, #E0218A 0%, #FF6EC7 100%) !important;
-    }
-    
-    div[data-baseweb="slider"] span {
-        background: linear-gradient(135deg, #E0218A 0%, #FF6EC7 100%) !important;
-        border-color: #E0218A !important;
-        box-shadow: 0 2px 8px rgba(224, 33, 138, 0.3);
-    }
-    
-    /* Dark containers with pink accents */
-    .dark-container {
-        background-color: #111111;
-        padding: 1.5rem;
-        border-radius: 15px;
-        border-left: 4px solid #E0218A;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    }
-    
-    .section-divider {
+    .subsection-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent, #E0218A, transparent);
-        margin: 2rem 0;
+        background: linear-gradient(90deg, transparent, var(--border), transparent);
+        margin: 30px 0;
+        width: 100%;
     }
     
-    /* Pink info notes */
-    .info-note {
-        background-color: rgba(224, 33, 138, 0.1);
-        border-left: 3px solid #E0218A;
-        padding: 1rem;
+    /* Compassionate text styling */
+    .compassionate-text {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .therapy-note {
+        background: rgba(255, 0, 160, 0.1);
+        border-left: 4px solid var(--accent-barbie);
+        padding: 16px;
         border-radius: 8px;
-        margin: 1rem 0;
-        color: #FFB6D9 !important;
-    }
-    
-    /* Pink warning boxes */
-    .warning-box {
-        background-color: rgba(224, 33, 138, 0.15);
-        border-left: 4px solid #FF6EC7;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        color: #FFB6D9 !important;
-    }
-    
-    /* Progress indicator - pink */
-    .progress-container {
-        margin: 2rem 0;
-    }
-    
-    .progress-step {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #333333;
-        margin: 0 6px;
-        transition: all 0.3s ease;
-    }
-    
-    .progress-step.active {
-        background: linear-gradient(135deg, #E0218A 0%, #FF6EC7 100%);
-        transform: scale(1.3);
-        box-shadow: 0 0 0 3px rgba(224, 33, 138, 0.2);
-    }
-    
-    /* Results card */
-    .result-card {
-        background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
-        border: 2px solid #333333;
-        border-left: 4px solid #E0218A;
-        padding: 2rem;
-        border-radius: 15px;
-        margin: 1.5rem 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Status indicators - PINK variations (NO RED) */
-    .status-low { 
-        color: #FF6EC7 !important; 
-        font-weight: 600; 
-        background: rgba(255, 110, 199, 0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        display: inline-block;
-    }
-    .status-medium { 
-        color: #E0218A !important; 
-        font-weight: 600; 
-        background: rgba(224, 33, 138, 0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        display: inline-block;
-    }
-    .status-high { 
-        color: #FF1493 !important; 
-        font-weight: 600; 
-        background: rgba(255, 110, 199, 0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        display: inline-block;
-    }
-    
-    /* Custom checkbox styling */
-    .stCheckbox > label {
-        color: #ffffff !important;
-        font-weight: 500;
-    }
-    
-    /* Radio buttons */
-    div[data-baseweb="radio"] > div {
-        background-color: #111111;
-        padding: 10px;
-        border-radius: 10px;
-        border: 1px solid #333333;
-    }
-    
-    /* Therapeutic explanation boxes */
-    .therapy-box {
-        background-color: rgba(224, 33, 138, 0.05);
-        border: 1px solid rgba(224, 33, 138, 0.2);
-        padding: 1.2rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        color: #FFB6D9 !important;
+        margin: 16px 0;
         font-style: italic;
     }
     
-    /* Large number display for results */
-    .big-number {
-        font-size: 4em;
-        font-weight: 700;
-        background: linear-gradient(90deg, #E0218A 0%, #FF6EC7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-align: center;
-        margin: 0.5rem 0;
-    }
-    
-    /* Pink pill badges - horizontal layout */
-    .pill-badge {
-        background: rgba(224, 33, 138, 0.2);
-        color: #FF6EC7 !important;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.9em;
-        margin: 0.3rem;
+    /* Status badges - All in Pink Shades */
+    .badge {
         display: inline-block;
-    }
-    
-    /* Hide Streamlit default elements */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    /* Scrollbar styling */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #111111;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: #E0218A;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: #FF6EC7;
-    }
-    
-    /* Trigger section headers */
-    .section-header {
-        color: #FF6EC7;
-        font-size: 1.2em;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 14px;
         font-weight: 600;
-        margin: 1.5rem 0 0.5rem 0;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid rgba(224, 33, 138, 0.3);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 4px;
     }
     
-    /* Intensity display box */
-    .intensity-box {
-        background: #111111;
-        padding: 1.5rem;
+    .badge-low { 
+        background: rgba(255, 182, 193, 0.2); 
+        color: #FFB6C1;
+        border: 1px solid #FFB6C1;
+    }
+    
+    .badge-medium { 
+        background: rgba(255, 105, 180, 0.2); 
+        color: #FF69B4;
+        border: 1px solid #FF69B4;
+    }
+    
+    .badge-high { 
+        background: rgba(255, 0, 127, 0.2); 
+        color: #FF007F;
+        border: 1px solid #FF007F;
+    }
+    
+    /* Action items */
+    .action-item {
+        background: rgba(255, 0, 160, 0.05);
+        border: 1px solid rgba(255, 0, 160, 0.2);
         border-radius: 10px;
-        text-align: center;
-        margin: 1rem 0;
-        border: 1px solid #333333;
+        padding: 16px;
+        margin: 12px 0;
+        transition: all 0.3s ease;
     }
     
-    /* Slider value display */
-    .slider-value {
-        font-size: 2em;
-        color: #FF6EC7;
-        font-weight: 700;
-        margin: 0.5rem 0;
+    .action-item:hover {
+        background: rgba(255, 0, 160, 0.1);
+        border-color: var(--accent-barbie);
     }
     
-    /* Horizontal pill container */
-    .pill-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 1rem;
+    /* Info boxes */
+    .info-note {
+        background: rgba(255, 0, 160, 0.1);
+        border-left: 4px solid var(--accent-neon);
+        padding: 16px;
+        border-radius: 8px;
+        margin: 16px 0;
     }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    
+    /* Form labels */
+    .stForm > div > div > label {
+        color: var(--text-primary) !important;
+        font-weight: 500 !important;
+        margin-bottom: 8px !important;
+    }
+    
+    /* Expander headers */
+    .streamlit-expanderHeader {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        color: var(--text-primary) !important;
+        font-weight: 500 !important;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        border-color: var(--accent-barbie) !important;
+    }
+    
+    /* Custom container for triggers */
+    .trigger-container {
+        background: var(--bg-input);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 15px 0;
+        border: 1px solid var(--border);
+    }
+    
+    /* Welcome message */
+    .welcome-message {
+        background: linear-gradient(135deg, rgba(255, 0, 160, 0.1), rgba(255, 0, 127, 0.1));
+        border: 1px solid var(--accent-barbie);
+        border-radius: 12px;
+        padding: 30px;
+        margin: 20px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# =========================================================
-# SESSION STATE MANAGEMENT
-# =========================================================
-if "current_step" not in st.session_state:
-    st.session_state.current_step = 0
-if "user_data" not in st.session_state:
-    st.session_state.user_data = {}
+# ==================== CONSTANTS ====================
+FILE_NAME = 'sophia_dataset.csv'
 
-# =========================================================
-# DATA DEFINITIONS (EXACTLY FROM ORIGINAL CODE)
-# =========================================================
+# ==================== EXACT COPY OF YOUR ORIGINAL DATA STRUCTURES ====================
 ADDICTION_GROUPS = {
     1: {
         'group_name': 'Cannabis',
@@ -414,7 +429,7 @@ ADDICTION_GROUPS = {
 }
 
 TRIGGERS = {
-    'Emotional Triggers': {
+    'Emotional': {
         'a': 'Stress',
         'b': 'Anxiety',
         'c': 'Depression',
@@ -426,7 +441,7 @@ TRIGGERS = {
         'i': 'Grief or loss',
         'j': 'Feeling overwhelmed'
     },
-    'Mental Triggers': {
+    'Mental': {
         'a': 'Cravings',
         'b': 'Obsessive thoughts',
         'c': 'Rationalizing use',
@@ -435,7 +450,7 @@ TRIGGERS = {
         'f': 'Hopelessness',
         'g': 'Overconfidence in control'
     },
-    'Environmental Triggers': {
+    'Environmental': {
         'a': 'Being around substances',
         'b': 'Certain places',
         'c': 'Easy access to drugs',
@@ -443,7 +458,7 @@ TRIGGERS = {
         'e': 'Being alone too long',
         'f': 'Parties or social events'
     },
-    'Social Triggers': {
+    'Social': {
         'a': 'Peer pressure',
         'b': 'Conflict with others',
         'c': 'Feeling judged',
@@ -453,1175 +468,918 @@ TRIGGERS = {
     }
 }
 
-CRAVING_TYPES = [
-    'Physical urge',
-    'Mental obsession',
-    'Emotional craving',
-    'Habit-based craving',
-    'Stress-induced craving',
-    'None'
-]
-
-MENTAL_HEALTH_CONDITIONS = [
-    'Depression',
-    'Anxiety',
-    'PTSD',
-    'Bipolar disorder',
-    'ADHD',
-    'Personality Disorder',
-    'Other',
-    'None'
-]
-
-LIFE_STRESSORS = [
-    'Financial problems',
-    'Work or school stress',
-    'Relationship issues',
-    'Health problems',
-    'Legal issues',
-    'Recent loss or grief',
-    'None'
-]
-
-SUPPORT_OPTIONS = [
-    'Family',
-    'Friends',
-    'Support group',
-    'Therapist',
-    'None'
-]
-
-GENDER_OPTIONS = ["", "Male", "Female", "Non-binary", "Prefer not to say"]
-
-# =========================================================
-# THERAPEUTIC EXPLANATIONS
-# =========================================================
-THERAPY_EXPLANATIONS = {
-    'triggers': """
-    <div class='therapy-box'>
-    <b>Understanding Triggers:</b> Triggers are situations, emotions, or thoughts that can make you want to use or relapse. 
-    Identifying them helps you prepare coping strategies. It's normal to have triggers—what matters is how you respond to them.
-    </div>
-    """,
-    
-    'intensity': """
-    <div class='therapy-box'>
-    <b>About Intensity Levels:</b> These scales help us understand the current state of your cravings, stress, and accessibility. 
-    Being honest about these levels helps create a more accurate support plan.
-    </div>
-    """
+CRAVING_TYPES = {
+    'a': 'Physical urge',
+    'b': 'Mental obsession',
+    'c': 'Emotional craving',
+    'd': 'Habit-based craving',
+    'e': 'Stress-induced craving',
+    'f': 'None'
 }
 
-# =========================================================
-# UTILITY FUNCTIONS
-# =========================================================
-def next_step():
-    st.session_state.current_step += 1
-    st.rerun()
+# ==================== COMPASSIONATE MESSAGES ====================
+COMPASSIONATE_MESSAGES = {
+    'welcome': [
+        "I'm Sophia, your compassionate companion on this recovery journey.",
+        "Every step you take towards healing is a victory, and I'm here to honor that with you.",
+        "Your courage in seeking support is the first sign of your strength.",
+        "Today, we'll work together to understand your unique journey and create a path forward."
+    ],
+    'progress': [
+        "Thank you for sharing that with me. It takes real courage to be this honest.",
+        "I hear you, and I want you to know that everything you're feeling is valid.",
+        "You're doing important work right now, and I'm here to support you through it.",
+        "Each piece of information you share helps me understand how to support you better."
+    ],
+    'completion': [
+        "Thank you for trusting me with your story. Your vulnerability is a sign of strength.",
+        "You've just taken a powerful step towards understanding yourself better.",
+        "I'm honored to walk alongside you in this journey of healing and growth.",
+        "Your commitment to this process shows incredible resilience."
+    ]
+}
 
-def prev_step():
-    if st.session_state.current_step > 0:
-        st.session_state.current_step -= 1
-    st.rerun()
+# ==================== HUMAN-CENTERED ACTION PLANS ====================
+HUMAN_ACTION_PLANS = {
+    'low': {
+        'title': "Acknowledging Your Strength 🌈",
+        'introduction': "Your journey so far shows remarkable resilience. You're in a space of stability, which is a testament to your hard work.",
+        'actions': [
+            {
+                'title': "Celebrate Your Progress",
+                'description': "Take a moment each day to acknowledge how far you've come. Write down one small victory from your recovery journey."
+            },
+            {
+                'title': "Deepen Your Self-Connection",
+                'description': "Spend 10 minutes each morning in quiet reflection. Notice what you're feeling without judgment—this builds emotional awareness."
+            },
+            {
+                'title': "Nurture Your Support System",
+                'description': "Reach out to someone who supports you, not because you need help, but to strengthen that connection. Share something positive."
+            },
+            {
+                'title': "Explore New Growth Paths",
+                'description': "Consider activities that bring you joy and meaning outside of recovery. What did you love before addiction that you might rediscover?"
+            },
+            {
+                'title': "Practice Gratitude for Your Body",
+                'description': "Your body has carried you through this journey. Do one gentle, loving thing for your physical self today."
+            }
+        ],
+        'closing': "Remember: Recovery isn't about perfection—it's about showing up for yourself with compassion, even on the good days."
+    },
+    'medium': {
+        'title': "Honoring Your Awareness 🍃",
+        'description': "You're noticing some vulnerability, and that's actually a sign of wisdom. Let's work with what you're feeling.",
+        'actions': [
+            {
+                'title': "Create a Gentle Morning Ritual",
+                'description': "Start each day with 5 minutes of deep breathing and one kind statement to yourself. This sets a compassionate tone."
+            },
+            {
+                'title': "Identify Your 'Tender Spots'",
+                'description': "Without judgment, notice which situations or feelings feel most challenging right now. Just naming them reduces their power."
+            },
+            {
+                'title': "Reach Out Before You Need To",
+                'description': "Contact your support person today, not in crisis, but in connection. Share how you're really doing."
+            },
+            {
+                'title': "Create a 'Comfort Kit'",
+                'description': "Gather items that soothe you—a favorite blanket, calming music, photos of loved ones, comforting scents."
+            },
+            {
+                'title': "Practice the 'Pause & Breathe' Technique",
+                'description': "When you feel unsettled, pause for three deep breaths. Imagine you're breathing in peace, breathing out tension."
+            },
+            {
+                'title': "Journal Without Editing",
+                'description': "Write for 10 minutes without worrying about grammar or sense. Let your feelings flow onto the page without censorship."
+            }
+        ],
+        'closing': "This is a moment of learning, not failure. Each time you recognize a trigger, you're building your recovery muscles."
+    },
+    'high': {
+        'title': "You Are Not Alone 🤝",
+        'description': "Right now feels intense, and that's completely understandable. Let's create some immediate comfort and safety.",
+        'actions': [
+            {
+                'title': "Immediate Grounding",
+                'description': "Find one thing you can see, one you can hear, one you can feel. Name them quietly. You're here, you're safe in this moment."
+            },
+            {
+                'title': "Reach for Connection",
+                'description': "Call or text your support person right now. You don't need to have the right words—just say 'I'm having a hard moment.'"
+            },
+            {
+                'title': "Create a Safe Space",
+                'description': "Go to a room that feels comforting. Wrap yourself in a blanket. This is your protective cocoon for now."
+            },
+            {
+                'title': "Speak to Your Younger Self",
+                'description': "What would you say to a child who was feeling this way? Offer yourself that same tenderness and reassurance."
+            },
+            {
+                'title': "Use Your Emergency Contacts",
+                'description': "Don't hesitate to reach out to your therapist, support group, or crisis line. Asking for help is an act of courage."
+            },
+            {
+                'title': "One Gentle Movement",
+                'description': "Stand up and gently stretch your arms toward the sky, then fold forward. Connect with your body's presence."
+            },
+            {
+                'title': "The 'Just For Now' Promise",
+                'description': "Tell yourself: 'Just for the next hour, I will stay safe. Just for this hour, I will breathe.' Break it down to manageable moments."
+            }
+        ],
+        'closing': "This intensity will pass. You have survived every hard moment before this one. I believe in your resilience, even when you might not."
+    }
+}
 
-def reset_app():
-    st.session_state.current_step = 0
-    st.session_state.user_data = {}
-    st.rerun()
+# ==================== EXACT COPY OF YOUR ORIGINAL ML FUNCTIONS ====================
+@st.cache_resource
+def load_and_train_models():
+    """EXACT COPY: Load and train ML models from your code"""
+    if os.path.exists(FILE_NAME) and os.path.getsize(FILE_NAME) > 0:
+        try:
+            df = pd.read_csv(FILE_NAME)
+            
+            if len(df) < 2:
+                return None, None, None, None, None
+            
+            features = ['age', 'gender', 'addiction_type', 'triggers', 'cravings', 'craving_intensity',
+                       'accessibility_or_exposure', 'medication', 'stress_levels', 'self_esteem',
+                       'mental_health_conditions', 'life_stressors', 'support']
+            
+            target_class = 'relapse_phase'
+            target_reg = 'prob_of_relapse'
+            
+            if not all(col in df.columns for col in features + [target_class, target_reg]):
+                return None, None, None, None, None
+            
+            X = df[features]
+            y_class = df[target_class]
+            y_reg = df[target_reg]
+            
+            categorical_cols = ['gender', 'addiction_type', 'triggers', 'cravings',
+                              'medication', 'mental_health_conditions', 'life_stressors', 'support']
+            
+            encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+            encoder.fit(X[categorical_cols])
+            
+            numerical_cols = ['age', 'accessibility_or_exposure', 'craving_intensity', 
+                             'stress_levels', 'self_esteem']
+            
+            X_encoded = encoder.transform(X[categorical_cols])
+            X_final = pd.DataFrame(X_encoded, columns=encoder.get_feature_names_out(categorical_cols))
+            X_final[numerical_cols] = X[numerical_cols].reset_index(drop=True)
+            
+            clf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+            clf_model.fit(X_final, y_class)
+            
+            reg_model = RandomForestRegressor(n_estimators=100, random_state=42)
+            reg_model.fit(X_final, y_reg)
+            
+            return clf_model, reg_model, encoder, categorical_cols, numerical_cols
+            
+        except Exception as e:
+            st.error(f"Error loading models: {str(e)}")
+            return None, None, None, None, None
+    return None, None, None, None, None
 
-def show_progress():
-    steps = ["Welcome", "Basic Info", "Addiction", "Triggers", "Intensity Levels", 
-             "Medication", "Self-Esteem", "Mental Health", "Life Stressors", 
-             "Support", "Results"]
-    
-    current = st.session_state.current_step
-    if current >= len(steps):
-        current = len(steps) - 1
-    
-    progress_html = f"""
-    <div class="progress-container">
-        <div style="text-align: center; margin-bottom: 1rem; color: #FF6EC7; font-size: 0.9em;">
-            Step {current + 1} of {len(steps)}: {steps[current]}
-        </div>
-        <div style="text-align: center;">
-    """
-    
-    for i in range(len(steps)):
-        if i <= current:
-            progress_html += '<span class="progress-step active"></span>'
-        else:
-            progress_html += '<span class="progress-step"></span>'
-    
-    progress_html += "</div></div>"
-    st.markdown(progress_html, unsafe_allow_html=True)
+def prepare_user_data(user_data, encoder, categorical_cols, numerical_cols):
+    """EXACT COPY: Prepare user data for model prediction from your code"""
+    df_user = pd.DataFrame([user_data])
+    cat_encoded = encoder.transform(df_user[categorical_cols])
+    df_encoded = pd.DataFrame(cat_encoded, columns=encoder.get_feature_names_out(categorical_cols))
+    df_encoded[numerical_cols] = df_user[numerical_cols].reset_index(drop=True)
+    return df_encoded
+
+def classify_relapse(user_data, clf_model, encoder, categorical_cols, numerical_cols):
+    """EXACT COPY: Predict relapse phase from your code"""
+    if not clf_model or not encoder:
+        return "Unknown"
+    df_input = prepare_user_data(user_data, encoder, categorical_cols, numerical_cols)
+    return clf_model.predict(df_input)[0]
+
+def predict_relapse_probability(user_data, reg_model, encoder, categorical_cols, numerical_cols):
+    """EXACT COPY: Predict probability of relapse from your code"""
+    if not reg_model or not encoder:
+        return 0.5
+    df_input = prepare_user_data(user_data, encoder, categorical_cols, numerical_cols)
+    return round(float(reg_model.predict(df_input)[0]), 2)
 
 def store_data(user_data):
-    """Store user data to CSV - exactly like original"""
-    FILE_NAME = 'sophia_dataset.csv'
+    """EXACT COPY: Store user data to CSV from your code"""
     column_names = [
         'first_name', 'surname', 'age', 'gender', 'addiction_type', 'triggers',
         'cravings', 'craving_intensity', 'accessibility_or_exposure', 'medication',
         'stress_levels', 'self_esteem', 'mental_health_conditions', 'life_stressors',
         'support', 'relapse_phase', 'prob_of_relapse'
     ]
-
+    
     file_exists = os.path.exists(FILE_NAME)
-
+    
     if not file_exists:
         empty_df = pd.DataFrame(columns=column_names)
         empty_df.to_csv(FILE_NAME, index=False)
-
-    # Add new user data
+    
     with open(FILE_NAME, mode='a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=column_names)
         writer.writerow(user_data)
 
-def predict_relapse_risk(user_data):
-    """Simulate ML prediction - exactly like original logic"""
-    risk_score = 0
-    
-    # Factors from original logic
-    stress = user_data.get('stress_levels', 5)
-    cravings = user_data.get('craving_intensity', 5)
-    access = user_data.get('accessibility_or_exposure', 0)
-    support = user_data.get('support', 'None')
-    self_esteem = user_data.get('self_esteem', 6)
-    
-    # Calculate risk
-    risk_score += (stress / 10) * 0.25
-    risk_score += (cravings / 10) * 0.25
-    risk_score += (access / 5) * 0.20
-    
-    # Support system impact
-    if isinstance(support, list):
-        support_factor = 1 if 'None' in support else (1 - (len(support) * 0.2))
-    else:
-        support_factor = 1 if support == 'None' else 0.5
-    
-    risk_score += support_factor * 0.15
-    
-    # Self-esteem impact (lower = higher risk)
-    risk_score += ((12 - self_esteem) / 12) * 0.15
-    
-    # Determine phase
-    if risk_score < 0.3:
-        phase = "low"
-        prob = 0.2 + (risk_score * 0.2)
-    elif risk_score < 0.7:
-        phase = "medium"
-        prob = 0.4 + ((risk_score - 0.3) * 0.3)
-    else:
-        phase = "high"
-        prob = 0.7 + ((risk_score - 0.7) * 0.3)
-    
-    return phase, round(min(prob, 0.95), 2)
 
-# =========================================================
-# STEP 0: INTRODUCTION
-# =========================================================
-if st.session_state.current_step == 0:
-    st.markdown("""
-    <div style="text-align: center; padding: 3rem 0 2rem 0;">
-        <div style="font-size: 4em; margin-bottom: 1rem; color: #E0218A;">🌸</div>
-        <h1>Sophia</h1>
-        <p style="color: #FFB6D9; font-size: 1.1em; max-width: 600px; margin: 0 auto;">
-        Your compassionate companion for relapse prevention and recovery support
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="dark-container">
-        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-            <div style="font-size: 1.5em; margin-right: 0.5rem; color: #FF6EC7;">🤍</div>
-            <h3 style="margin: 0; color: #ffffff;">Welcome</h3>
-        </div>
-        <p style="color: #cccccc; line-height: 1.6;">
-        Hi, I'm <span style="color: #FF6EC7; font-weight: 500;">Sophia</span>. I'm here to support you on your recovery journey. 
-        I'm going to walk you through a few questions about your experiences and feelings, 
-        so I can give you more personalized guidance.
-        </p>
-        <div class="info-note">
-        <b>🌸 Important:</b> This is a reflective check-in tool, not a diagnosis or replacement 
-        for professional medical care. Always consult with healthcare professionals for medical advice.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("Begin Assessment 🌷", use_container_width=True):
-            next_step()
 
-# =========================================================
-# STEP 1: BASIC INFORMATION
-# =========================================================
-elif st.session_state.current_step == 1:
-    show_progress()
-    
-    st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">👤 Basic Information</h3>
-        <p style="color: #FFB6D9;">
-        First, let's start with some basic information so I can better understand your situation.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
+# ==================== COMPASSIONATE UI COMPONENTS ====================
+def render_welcome():
     with st.container():
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            first_name = st.text_input("First Name", key="first_name")
-            age = st.number_input("Age", min_value=1, max_value=120, value=25, key="age")
-        
-        with col2:
-            surname = st.text_input("Last Name", key="surname")
-            gender = st.selectbox("Gender", GENDER_OPTIONS, key="gender")
-    
-    if first_name and surname and gender and age > 0:
-        st.session_state.user_data.update({
-            "first_name": first_name,
-            "surname": surname,
-            "age": age,
-            "gender": gender.lower()
-        })
-        
-        st.markdown(f"""
-        <div class="info-note">
-        ✨ Nice to meet you, {first_name}. Let's dive straight into it.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Next →", use_container_width=True):
-                next_step()
-    else:
         st.markdown("""
-        <div class="warning-box">
-        💗 Please fill in all the fields to continue.
+        <div class="welcome-message">
+            <h1>Welcome to Sophia 🌸</h1>
+            <p class="compassionate-text">
+                I'm here to walk beside you on your recovery journey with compassion, understanding, 
+                and evidence-based support. This isn't just an assessment—it's a conversation between 
+                two humans, with AI as our tool for deeper understanding.
+            </p>
+            <p class="compassionate-text">
+                Take your time with each section. There's no rush. Your comfort and readiness are what 
+                matter most.
+            </p>
         </div>
         """, unsafe_allow_html=True)
 
-# =========================================================
-# STEP 2: ADDICTION INFORMATION
-# =========================================================
-elif st.session_state.current_step == 2:
-    show_progress()
-    
-    st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">💊 Addiction Information</h3>
-        <p style="color: #FFB6D9;">
-        What type of addiction do you have? Choose 1 from the list below.
-        </p>
-        <div class="info-note">
-        <b>Note:</b> This program focuses on one addiction at a time. 
-        If you want to work on another, you can complete another assessment.
+
+def render_section_divider(title):
+    """Create a section with title only (no centered pink separator line)"""
+    st.markdown(
+        f"""
+        <div class="section-divider-container">
+            <h2>{title}</h2>
         </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_subsection_divider():
+    """Create a subsection divider (no centered pink separator line)"""
+    st.markdown(
+        """
+        <div class="subsection-divider-container">
+            <hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_compassionate_note(text):
+    """Render a compassionate note INSIDE its div"""
+    st.markdown(
+        f"""
+        <div class="therapy-note">
+            <p>{text}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_basic_info():
+    """Basic information section with compassionate approach"""
+    st.markdown("""
+    <div class="therapy-note">
+        <p>Let's start gently. Knowing a little about you helps me understand your unique journey. 
+        Every story is different, and I want to honor yours.</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Convert addiction groups to user-friendly format
-    group_options = [""] + [f"{k}. {v['group_name']}" for k, v in ADDICTION_GROUPS.items()]
     
     col1, col2 = st.columns(2)
     
     with col1:
-        group_display = st.selectbox("Substance Group (1-8)", group_options, key="group_select")
-        
-        if group_display:
-            group_choice = int(group_display.split(".")[0])
-            selected_group = ADDICTION_GROUPS[group_choice]
-        else:
-            group_choice = None
-            selected_group = None
+        first_name = st.text_input("First Name", key="first_name", help="What name do you prefer to be called?")
+        age = st.number_input("Age", min_value=1, max_value=120, value=25, 
+                            help="Your age helps me understand your life stage context")
     
     with col2:
-        if group_choice:
-            drug_options = [""] + [f"{k}. {v}" for k, v in selected_group['drugs'].items()]
-            drug_display = st.selectbox("Specific Substance", drug_options, key="drug_select")
-            
-            if drug_display:
-                drug_choice = drug_display.split(".")[0]
-                selected_drug = selected_group['drugs'][drug_choice]
-            else:
-                drug_choice = None
-                selected_drug = None
-        else:
-            st.selectbox("Specific Substance", [""], disabled=True, key="drug_disabled")
+        surname = st.text_input("Last Name", key="surname")
+        gender = st.selectbox("Gender Identity", 
+                            ['Select your gender identity...', 
+                             'Male', 
+                             'Female', 
+                             'Non-binary',
+                             'Transgender',
+                             'Genderqueer',
+                             'Prefer not to say',
+                             'Other (please specify)'], 
+                            key="gender")
     
-    if group_choice and drug_choice:
-        addiction_type = f"{selected_group['group_name']} -> {selected_drug}"
-        st.session_state.user_data["addiction_type"] = addiction_type
-        
-        st.markdown(f"""
-        <div class="info-note">
-        ✨ Thank you for sharing. Now let's explore your triggers.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Next →", use_container_width=True):
-                next_step()
-    else:
-        st.markdown("""
-        <div class="warning-box">
-        💗 Please select both the substance group and specific substance.
-        </div>
-        """, unsafe_allow_html=True)
+    if gender == 'Other (please specify)':
+        other_gender = st.text_input("Please share your gender identity:", key="other_gender")
+        if other_gender:
+            gender = other_gender
+    
+    return {
+        'first_name': first_name,
+        'surname': surname,
+        'age': age,
+        'gender': gender if gender != 'Select your gender identity...' else ''
+    }
 
-# =========================================================
-# STEP 3: TRIGGERS (ALL IN ONE SECTION WITH MULTISELECT FOR EACH TYPE)
-# =========================================================
-elif st.session_state.current_step == 3:
-    show_progress()
+def render_addiction_info():
+    """Simplest working version - no fancy logic"""
     
+    # Intro note
     st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">⚡ Triggers Assessment</h3>
-        <p style="color: #FFB6D9;">
-        Understanding your triggers helps you prepare for challenging moments.
-        </p>
+    <div class="therapy-note">
+        <p>Understanding your relationship with substances helps me tailor support specifically for you. 
+        There's no judgment here—only understanding.</p>
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown('<hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;">', unsafe_allow_html=True)
+    st.markdown('<h4>What type of substance are you working with?</h4>', unsafe_allow_html=True)
+
+    # Columns for dropdowns
+    col1, col2 = st.columns(2)
     
-    # Therapeutic explanation
-    st.markdown(THERAPY_EXPLANATIONS['triggers'], unsafe_allow_html=True)
+    with col1:
+        # Create group options with display names
+        group_display_options = ["-- Select Group --"]
+        group_mapping = {}  # Map display names to keys
+        
+        for key, value in ADDICTION_GROUPS.items():
+            display_name = f"{key}. {value['group_name']}"
+            group_display_options.append(display_name)
+            group_mapping[display_name] = key
+        
+        selected_group_display = st.selectbox(
+            "Substance Group",
+            group_display_options,
+            key="group_select_2"
+        )
+    
+    # Always show second dropdown, but control its options
+    with col2:
+        if selected_group_display != "-- Select Group --":
+            group_key = group_mapping[selected_group_display]
+            group_data = ADDICTION_GROUPS[group_key]
+            
+            # Create drug options
+            drug_display_options = ["-- Select Substance --"]
+            drug_mapping = {}
+            
+            for d_key, d_name in group_data['drugs'].items():
+                display_name = f"{d_key}. {d_name}"
+                drug_display_options.append(display_name)
+                drug_mapping[display_name] = (d_key, d_name)
+            
+            selected_drug_display = st.selectbox(
+                "Specific Substance",
+                drug_display_options,
+                key="drug_select_2"
+            )
+            
+            if selected_drug_display != "-- Select Substance --":
+                drug_key, drug_name = drug_mapping[selected_drug_display]
+                group_name = group_data['group_name']
+                addiction_type = f"{group_name} -> {drug_name}"
+                
+                st.markdown("""
+                <div class="info-note" style="margin-top: 20px;">
+                ✨ Thank you for sharing. We'll use this information to personalize your support plan.
+                </div>
+                """, unsafe_allow_html=True)
+                
+                return addiction_type
+            else:
+                st.markdown("""
+                <div class="info-note" style="margin-top: 20px; border-left-color: #FF69B4;">
+                💗 Please select a specific substance.
+                </div>
+                """, unsafe_allow_html=True)
+                return ""
+        else:
+            # Show disabled dropdown when no group selected
+            st.selectbox(
+                "Specific Substance",
+                ["Select a group first"],
+                key="drug_select_disabled",
+                disabled=True
+            )
+            st.markdown("""
+            <div class="info-note" style="margin-top: 20px; border-left-color: #FFB6C1;">
+            💗 Please select a substance group first.
+            </div>
+            """, unsafe_allow_html=True)
+            return ""
+    
+    return ""
+
+
+
+
+def render_triggers_section():
+    """Triggers section - clean and compassionate"""
+    st.markdown("""
+    <div class="therapy-note">
+        <p>Triggers are normal—they're signals from our experiences and emotions. 
+        Identifying them isn't about blame, but about understanding your patterns with kindness.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     all_selected_triggers = []
     
-    # Emotional Triggers
-    st.markdown('<div class="section-header">🎭 Emotional Triggers</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    Feelings and emotional states that might lead to cravings
-    </div>
-    """, unsafe_allow_html=True)
-    
-    emotional_triggers = list(TRIGGERS['Emotional Triggers'].values())
-    selected_emotional = st.multiselect(
-        "Select emotional triggers:",
-        emotional_triggers,
-        key="emotional_triggers",
-        help="Select all that apply"
-    )
-    all_selected_triggers.extend(selected_emotional)
-    
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    
-    # Mental Triggers
-    st.markdown('<div class="section-header">💭 Mental Triggers</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    Thoughts and thinking patterns that can lead to cravings
-    </div>
-    """, unsafe_allow_html=True)
-    
-    mental_triggers = list(TRIGGERS['Mental Triggers'].values())
-    selected_mental = st.multiselect(
-        "Select mental triggers:",
-        mental_triggers,
-        key="mental_triggers",
-        help="Select all that apply"
-    )
-    all_selected_triggers.extend(selected_mental)
-    
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    
-    # Environmental Triggers
-    st.markdown('<div class="section-header">📍 Environmental Triggers</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    Places, situations, or environmental factors that can trigger cravings
-    </div>
-    """, unsafe_allow_html=True)
-    
-    environmental_triggers = list(TRIGGERS['Environmental Triggers'].values())
-    selected_environmental = st.multiselect(
-        "Select environmental triggers:",
-        environmental_triggers,
-        key="environmental_triggers",
-        help="Select all that apply"
-    )
-    all_selected_triggers.extend(selected_environmental)
-    
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    
-    # Social Triggers
-    st.markdown('<div class="section-header">👥 Social Triggers</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    People and social situations that can trigger cravings
-    </div>
-    """, unsafe_allow_html=True)
-    
-    social_triggers = list(TRIGGERS['Social Triggers'].values())
-    selected_social = st.multiselect(
-        "Select social triggers:",
-        social_triggers,
-        key="social_triggers",
-        help="Select all that apply"
-    )
-    all_selected_triggers.extend(selected_social)
-    
-    # Show selected triggers summary - HORIZONTAL LAYOUT
-    if all_selected_triggers:
-        st.markdown("""
-        <div class="dark-container">
-            <h4 style="color: #FF6EC7;">✅ Selected Triggers Summary</h4>
-            <div class="pill-container">
-        """, unsafe_allow_html=True)
+    for category, trigger_dict in TRIGGERS.items():
+        st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+        st.markdown(f'<h4>{category} Triggers</h4>', unsafe_allow_html=True)
         
-        for trigger in all_selected_triggers:
-            st.markdown(f'<span class="pill-badge">{trigger}</span>', unsafe_allow_html=True)
+        # Clean trigger display without letters
+        trigger_options = list(trigger_dict.values())
         
-        st.markdown(f"""
-            </div>
-            <div style="margin-top: 1rem; color: #FFB6D9;">
-            Total triggers selected: <b>{len(all_selected_triggers)}</b>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Multiselect for triggers
+        selected_triggers = st.multiselect(
+            f"Which {category.lower()} experiences tend to challenge you?",
+            trigger_options,
+            key=f"triggers_{category}",
+            help="Select all that feel relevant to your experience"
+        )
+        
+        all_selected_triggers.extend(selected_triggers)
     
-    # Navigation
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("← Back", use_container_width=True):
-            prev_step()
-    with col3:
-        if st.button("Next →", use_container_width=True):
-            if all_selected_triggers:
-                st.session_state.user_data['triggers'] = ', '.join(all_selected_triggers)
-                st.markdown("""
-                <div class="info-note">
-                ✨ Great job identifying your triggers! Now let's assess your current intensity levels.
-                </div>
-                """, unsafe_allow_html=True)
-                next_step()
-            else:
-                st.markdown("""
-                <div class="warning-box">
-                💗 Please select at least one trigger to continue.
-                </div>
-                """, unsafe_allow_html=True)
+    return ', '.join(all_selected_triggers) if all_selected_triggers else 'None identified'
 
-# =========================================================
-# STEP 4: INTENSITY LEVELS (CRAVINGS, STRESS, ACCESSIBILITY IN ONE PAGE)
-# =========================================================
-elif st.session_state.current_step == 4:
-    show_progress()
-    
+def render_cravings_section():
+    """Cravings section with compassionate language"""
     st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">📊 Intensity Levels Assessment</h3>
-        <p style="color: #FFB6D9;">
-        Let's assess your current craving intensity, stress levels, and accessibility.
-        </p>
+    <div class="therapy-note">
+        <p>Cravings are messages from our body and mind—they don't define who we are. 
+        Let's explore them with curiosity rather than criticism.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Therapeutic explanation
-    st.markdown(THERAPY_EXPLANATIONS['intensity'], unsafe_allow_html=True)
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
     
-    # Cravings Section
-    st.markdown('<div class="section-header">💭 Cravings Intensity</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    Rate your current craving intensity from 0-10
-    </div>
-    """, unsafe_allow_html=True)
+    # Clean craving options without letters
+    craving_options = list(CRAVING_TYPES.values())
     
-    craving_intensity = st.slider(
-        "Craving Intensity (0 = No craving, 10 = Extreme craving)",
+    # Multiselect for cravings
+    selected_cravings = st.multiselect(
+        "What kinds of cravings do you experience?",
+        craving_options,
+        key="cravings",
+        help="Select the types that resonate with your experience"
+    )
+    
+    craving_str = ', '.join(selected_cravings) if selected_cravings else 'None currently'
+    
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+    
+    # Intensity with compassionate framing
+    st.markdown('<h4>How intense are these feelings for you right now?</h4>', unsafe_allow_html=True)
+    intensity = st.slider(
+        "On a scale where 0 is barely noticeable and 10 feels overwhelming",
         min_value=0,
         max_value=10,
         value=5,
-        key="craving_intensity_slider"
+        key="craving_intensity",
+        help="There's no right or wrong answer—just what's true for you now"
     )
     
-    # Display craving intensity
-    craving_levels = ["No craving", "Very mild", "Mild", "Mild to moderate", "Moderate", 
-                      "Moderate to high", "High", "Very high", "Severe", "Very severe", "Extreme"]
-    craving_color = "#FF6EC7" if craving_intensity < 4 else ("#E0218A" if craving_intensity < 7 else "#FF1493")
-    
-    st.markdown(f"""
-    <div class="intensity-box">
-        <div class="slider-value" style="color: {craving_color};">{craving_intensity}/10</div>
-        <div style="color: #FFB6D9;">{craving_levels[craving_intensity]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.session_state.user_data['craving_intensity'] = craving_intensity
-    
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    
-    # Stress Levels Section
-    st.markdown('<div class="section-header">😰 Stress Levels</div>', unsafe_allow_html=True)
+    return craving_str, intensity
+
+def render_accessibility_section():
+    """Accessibility section"""
     st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    Rate your current stress level from 0-10
+    <div class="therapy-note">
+        <p>Understanding your environment helps us create practical strategies. 
+        This isn't about willpower—it's about creating supportive conditions.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    stress_level = st.slider(
-        "Stress Level (0 = No stress, 10 = Extremely stressed)",
-        min_value=0,
-        max_value=10,
-        value=5,
-        key="stress_slider"
-    )
-    
-    # Display stress level
-    stress_levels = ["No stress", "Very mild", "Mild", "Mild to moderate", "Moderate", 
-                     "Moderate to high", "High", "Very high", "Severe", "Very severe", "Extreme"]
-    stress_color = "#FF6EC7" if stress_level < 4 else ("#E0218A" if stress_level < 7 else "#FF1493")
-    
-    st.markdown(f"""
-    <div class="intensity-box">
-        <div class="slider-value" style="color: {stress_color};">{stress_level}/10</div>
-        <div style="color: #FFB6D9;">{stress_levels[stress_level]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.session_state.user_data['stress_levels'] = stress_level
-    
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    
-    # Accessibility Section
-    st.markdown('<div class="section-header">📍 Substance Accessibility</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    How easy is it to access substances right now?
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
     
     accessibility = st.slider(
-        "Accessibility (0 = No access, 5 = Very easy access)",
+        "How accessible are substances in your current environment?",
         min_value=0,
         max_value=5,
-        value=0,
-        key="accessibility_slider"
+        value=2,
+        key="accessibility",
+        help="0 = No access, 5 = Very easy access"
     )
     
-    # Display accessibility level
-    access_levels = ["No access", "Very difficult", "Difficult", "Moderate", "Easy", "Very easy"]
-    access_color = "#FF6EC7" if accessibility < 2 else ("#E0218A" if accessibility < 4 else "#FF1493")
-    
-    st.markdown(f"""
-    <div class="intensity-box">
-        <div class="slider-value" style="color: {access_color};">{accessibility}/5</div>
-        <div style="color: #FFB6D9;">{access_levels[accessibility]}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.session_state.user_data['accessibility_or_exposure'] = accessibility
-    
-    # Craving types (simple multiselect)
-    st.markdown('<div class="section-header">📋 Craving Types</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="color: #FFB6D9; margin-bottom: 1rem; font-size: 0.95em;">
-    What types of cravings do you experience?
-    </div>
-    """, unsafe_allow_html=True)
-    
-    selected_cravings = st.multiselect(
-        "Select craving types:",
-        CRAVING_TYPES,
-        help="Select all that apply",
-        key="cravings_multiselect"
-    )
-    
-    # Handle "None" selection
-    if selected_cravings and "None" in selected_cravings:
-        selected_cravings = ["None"]
-        st.info("'None' selected - other craving types have been cleared.")
-    
-    if selected_cravings:
-        st.session_state.user_data['cravings'] = ', '.join(selected_cravings)
-        
-        # Show selected cravings horizontally
-        if selected_cravings != ["None"]:
-            st.markdown("""
-            <div style="margin-top: 1rem;">
-                <div style="color: #FFB6D9; margin-bottom: 0.5rem;">Selected cravings:</div>
-                <div class="pill-container">
-            """, unsafe_allow_html=True)
-            
-            for craving in selected_cravings:
-                st.markdown(f'<span class="pill-badge">{craving}</span>', unsafe_allow_html=True)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
-    
-    # Navigation
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("← Back", use_container_width=True):
-            prev_step()
-    with col3:
-        if st.button("Next →", use_container_width=True):
-            if selected_cravings:
-                st.markdown(f"""
-                <div class="info-note">
-                ✨ Thank you for your honesty. Now let's talk about medication.
-                </div>
-                """, unsafe_allow_html=True)
-                next_step()
-            else:
-                st.markdown("""
-                <div class="warning-box">
-                💗 Please select at least one craving type.
-                </div>
-                """, unsafe_allow_html=True)
+    return accessibility
 
-# =========================================================
-# STEP 5: MEDICATION
-# =========================================================
-elif st.session_state.current_step == 5:
-    show_progress()
-    
+def render_medication_section():
+    """Medication section with yes/no and conditional input field"""
     st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">💊 Medication Information</h3>
-        <p style="color: #FFB6D9;">
-        Understanding your current medications helps provide better support.
-        </p>
+    <div class="therapy-note">
+        <p>Medications can be important tools in healing. Let's understand what you're working with.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    medication_option = st.selectbox(
-        "Are you currently taking any medication?",
-        ["", "Yes", "No"],
-        key="medication_select"
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+    
+    # Yes/No for medication
+    medication_option = st.radio(
+        "Are you currently taking any medications?",
+        ['No', 'Yes'],
+        key="medication_option",
+        horizontal=True
     )
     
-    if medication_option == "Yes":
-        medication_name = st.text_input("Please enter the medication name(s):", key="medication_name")
-        if medication_name:
-            st.session_state.user_data['medication'] = medication_name
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("← Back", use_container_width=True):
-                    prev_step()
-            with col3:
-                if st.button("Next →", use_container_width=True):
-                    next_step()
-    elif medication_option == "No":
-        st.session_state.user_data['medication'] = 'None'
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Next →", use_container_width=True):
-                next_step()
+    medication_details = ''
+    
+    if medication_option == 'Yes':
+        medication_details = st.text_area(
+            "Please list the medications you're taking:",
+            placeholder="e.g., Antidepressants, Anti-anxiety medication, Pain relievers...",
+            key="medication_details",
+            help="This helps me understand your full picture of care"
+        )
+        if medication_details:
+            medication = medication_details
+        else:
+            medication = 'Yes (unspecified)'
     else:
-        st.markdown("""
-        <div class="warning-box">
-        💗 Please select an option.
-        </div>
-        """, unsafe_allow_html=True)
-
-# =========================================================
-# STEP 6: SELF-ESTEEM ASSESSMENT
-# =========================================================
-elif st.session_state.current_step == 6:
-    show_progress()
+        medication = 'No'
     
+    return medication
+
+def render_stress_section():
+    """Stress levels with compassionate framing"""
     st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">🌟 Self-Esteem Assessment</h3>
-        <p style="color: #FFB6D9;">
-        Rate how much you agree with each statement (0-3)
-        </p>
+    <div class="therapy-note">
+        <p>Stress affects all of us differently. Let's check in with how you're feeling right now.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    self_esteem_questions = [
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+    
+    stress = st.slider(
+        "How would you describe your current stress level?",
+        min_value=0,
+        max_value=10,
+        value=5,
+        key="stress_levels",
+        help="0 = Completely calm, 10 = Overwhelming stress"
+    )
+    
+    return stress
+
+def render_self_esteem_section():
+    """Self-esteem with compassionate questions"""
+    st.markdown("""
+    <div class="therapy-note">
+        <p>Our relationship with ourselves is at the heart of healing. 
+        Let's explore this with gentle curiosity.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+    
+    questions = [
         "I feel good about myself most of the time.",
         "I believe I have value as a person.",
         "I am confident in my abilities.",
         "I feel worthy of love and respect."
     ]
     
-    rating_options = ["0 - Strongly disagree", "1 - Disagree", "2 - Agree", "3 - Strongly agree"]
-    
-    self_esteem_score = 0
-    
-    for i, question in enumerate(self_esteem_questions):
-        st.markdown(f"**{i+1}. {question}**")
-        rating_display = st.selectbox(
-            f"Select rating:",
-            rating_options,
-            key=f"self_esteem_select_{i}",
-            index=1  # Default to "1 - Disagree"
+    total_score = 0
+    for i, question in enumerate(questions):
+        st.markdown(f'<strong>{question}</strong>', unsafe_allow_html=True)
+        score = st.radio(
+            "",
+            options=["Strongly disagree", "Disagree", "Agree", "Strongly agree"],
+            index=2,
+            key=f"self_esteem_{i}",
+            horizontal=True,
+            label_visibility="collapsed"
         )
         
-        rating = int(rating_display.split(" - ")[0])
-        self_esteem_score += rating
+        # Convert to numeric
+        if score == "Strongly disagree":
+            total_score += 0
+        elif score == "Disagree":
+            total_score += 1
+        elif score == "Agree":
+            total_score += 2
+        else:  # Strongly agree
+            total_score += 3
+        
+        if i < len(questions) - 1:
+            st.markdown("---")
     
-    # Score visualization
-    max_score = 12
-    score_percentage = (self_esteem_score / max_score) * 100
-    score_color = "#FF6EC7" if score_percentage < 33 else ("#E0218A" if score_percentage < 66 else "#FF1493")
-    
-    st.markdown(f"""
-    <div class="intensity-box">
-        <div style="color: #FFB6D9; margin-bottom: 0.5rem;">Self-Esteem Score</div>
-        <div class="slider-value" style="color: {score_color};">{self_esteem_score}/{max_score}</div>
-        <div style="color: #999999; font-size: 0.9em; margin-top: 0.5rem;">
-        {['Needs attention', 'Room for growth', 'Good', 'Excellent'][min(self_esteem_score // 3, 3)]}
-        </div>
+    return total_score
+
+def render_mental_health_section():
+    """Mental health with compassionate framing"""
+    st.markdown("""
+    <div class="therapy-note">
+        <p>Mental health is part of our whole health. Understanding your experiences helps me support you better.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.session_state.user_data['self_esteem'] = self_esteem_score
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
+    
     with col1:
-        if st.button("← Back", use_container_width=True):
-            prev_step()
-    with col3:
-        if st.button("Next →", use_container_width=True):
-            next_step()
-
-# =========================================================
-# STEP 7: MENTAL HEALTH CONDITIONS (USING MULTISELECT)
-# =========================================================
-elif st.session_state.current_step == 7:
-    show_progress()
-    
-    st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">🧠 Mental Health Conditions</h3>
-        <p style="color: #FFB6D9;">
-        Understanding your mental health helps provide appropriate support.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Use multiselect for mental health conditions
-    selected_conditions = st.multiselect(
-        "Select diagnosed mental health conditions:",
-        MENTAL_HEALTH_CONDITIONS,
-        help="Select all that apply",
-        key="mh_multiselect"
-    )
-    
-    # Handle "Other" selection
-    if "Other" in selected_conditions:
-        other_condition = st.text_input("Please specify the other condition:", key="other_condition_mh")
-        if other_condition:
-            selected_conditions.remove("Other")
-            selected_conditions.append(other_condition)
-    
-    # Handle "None" selection
-    if selected_conditions and "None" in selected_conditions:
-        selected_conditions = ["None"]
-        st.info("'None' selected - other conditions have been cleared.")
-    
-    if selected_conditions:
-        st.session_state.user_data['mental_health_conditions'] = ', '.join(selected_conditions)
+        st.markdown('<h4>Mental Health History</h4>', unsafe_allow_html=True)
+        mental_health_options = [
+            'Depression',
+            'Anxiety',
+            'PTSD',
+            'Bipolar disorder',
+            'ADHD',
+            'Personality Disorder',
+            'Other',
+            'None diagnosed'
+        ]
         
-        # Show selected conditions horizontally
-        if selected_conditions != ["None"]:
-            st.markdown("""
-            <div style="margin-top: 1rem;">
-                <div style="color: #FFB6D9; margin-bottom: 0.5rem;">Selected conditions:</div>
-                <div class="pill-container">
-            """, unsafe_allow_html=True)
-            
-            for condition in selected_conditions:
-                st.markdown(f'<span class="pill-badge">{condition}</span>', unsafe_allow_html=True)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
+        selected_conditions = st.multiselect(
+            "Have you been diagnosed with any mental health conditions?",
+            mental_health_options,
+            key="mental_health"
+        )
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Next →", use_container_width=True):
-                next_step()
-    else:
-        st.markdown("""
-        <div class="warning-box">
-        💗 Please select at least one option.
-        </div>
-        """, unsafe_allow_html=True)
-
-# =========================================================
-# STEP 8: LIFE STRESSORS (USING MULTISELECT)
-# =========================================================
-elif st.session_state.current_step == 8:
-    show_progress()
-    
-    st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">🌪️ Life Stressors</h3>
-        <p style="color: #FFB6D9;">
-        Identifying current stressors helps develop coping strategies.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Use multiselect for stressors
-    selected_stressors = st.multiselect(
-        "Select current life stressors:",
-        LIFE_STRESSORS,
-        help="Select all that apply",
-        key="stressors_multiselect"
-    )
-    
-    # Handle "None" selection
-    if selected_stressors and "None" in selected_stressors:
-        selected_stressors = ["None"]
-        st.info("'None' selected - other stressors have been cleared.")
-    
-    if selected_stressors:
-        st.session_state.user_data['life_stressors'] = ', '.join(selected_stressors)
-        
-        if selected_stressors != ["None"]:
-            st.markdown("""
-            <div style="margin-top: 1rem;">
-                <div style="color: #FFB6D9; margin-bottom: 0.5rem;">Selected stressors:</div>
-                <div class="pill-container">
-            """, unsafe_allow_html=True)
-            
-            for stressor in selected_stressors:
-                st.markdown(f'<span class="pill-badge">{stressor}</span>', unsafe_allow_html=True)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="info-note">
-        ✨ Thank you for sharing. Recognizing stressors is the first step to managing them.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Next →", use_container_width=True):
-                next_step()
-    else:
-        st.markdown("""
-        <div class="warning-box">
-        💗 Please select at least one option.
-        </div>
-        """, unsafe_allow_html=True)
-
-# =========================================================
-# STEP 9: SUPPORT SYSTEM (USING MULTISELECT)
-# =========================================================
-elif st.session_state.current_step == 9:
-    show_progress()
-    
-    st.markdown("""
-    <div class="dark-container">
-        <h3 style="color: #ffffff; margin-bottom: 0.5rem;">🤝 Support System</h3>
-        <p style="color: #FFB6D9;">
-        Your support network plays a crucial role in recovery.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Use multiselect for support system
-    selected_support = st.multiselect(
-        "Select your support system:",
-        SUPPORT_OPTIONS,
-        help="Select all that apply",
-        key="support_multiselect"
-    )
-    
-    # Handle "None" selection
-    if selected_support and "None" in selected_support:
-        selected_support = ["None"]
-        st.info("'None' selected - other support options have been cleared.")
-    
-    if selected_support:
-        st.session_state.user_data['support'] = ', '.join(selected_support)
-        
-        # Visual display of support system horizontally
-        if selected_support != ["None"]:
-            st.markdown("""
-            <div style="margin-top: 1.5rem;">
-                <div style="color: #FF6EC7; font-size: 1.2em; margin-bottom: 1rem; text-align: center;">
-                    Your Support Network
-                </div>
-                <div class="pill-container" style="justify-content: center;">
-            """, unsafe_allow_html=True)
-            
-            for support in selected_support:
-                st.markdown(f"""
-                <span class="pill-badge" style="background: rgba(224, 33, 138, 0.3); font-size: 1em; padding: 0.8rem 1.2rem;">
-                    {support}
-                </span>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("← Back", use_container_width=True):
-                prev_step()
-        with col3:
-            if st.button("Get Results 🌸", use_container_width=True):
-                # Make predictions
-                relapse_phase, relapse_prob = predict_relapse_risk(st.session_state.user_data)
-                st.session_state.user_data['relapse_phase'] = relapse_phase
-                st.session_state.user_data['prob_of_relapse'] = relapse_prob
-                
-                # Store data
-                store_data(st.session_state.user_data)
-                next_step()
-    else:
-        st.markdown("""
-        <div class="warning-box">
-        💗 Please select your support system.
-        </div>
-        """, unsafe_allow_html=True)
-
-# =========================================================
-# STEP 10: RESULTS PAGE (FIXED FORMATTING)
-# =========================================================
-elif st.session_state.current_step == 10:
-    user_data = st.session_state.user_data
-    
-    # Beautiful results header
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0 1rem 0;">
-        <div style="font-size: 4em; margin-bottom: 1rem; color: #E0218A;">📊</div>
-        <h1>Your Assessment Results</h1>
-        <p style="color: #FFB6D9; font-size: 1.1em;">
-        Personalized analysis for {first_name}
-        </p>
-    </div>
-    """.format(first_name=user_data.get('first_name', '')), unsafe_allow_html=True)
-    
-    # Main results card
-    relapse_phase = user_data.get('relapse_phase', 'medium')
-    relapse_prob = user_data.get('prob_of_relapse', 0.5)
-    prob_percent = relapse_prob * 100
-    
-    # Determine status styling
-    if relapse_phase == 'low':
-        status_class = "status-low"
-        status_icon = "✅"
-        risk_text = "LOW RISK"
-    elif relapse_phase == 'medium':
-        status_class = "status-medium"
-        status_icon = "⚠️"
-        risk_text = "MEDIUM RISK"
-    else:
-        status_class = "status-high"
-        status_icon = "🚨"
-        risk_text = "HIGH RISK"
-    
-    st.markdown(f"""
-    <div class="result-card">
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 3em; margin-bottom: 1rem;">{status_icon}</div>
-            <h2 style="margin-bottom: 0.5rem;" class="{status_class}">{risk_text}</h2>
-            <p style="color: #FFB6D9;">Predicted Relapse Phase</p>
-        </div>
-        
-        <div style="background: #000000; padding: 2rem; border-radius: 15px; margin: 2rem 0; text-align: center;">
-            <div class="big-number">{prob_percent:.1f}%</div>
-            <p style="color: #FFB6D9; margin-top: 0.5rem;">Probability of Relapse</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Key Factors Section with ACTUAL DATA
-    st.markdown("""
-    <div class="result-card">
-        <h3 style="color: #ffffff; margin-bottom: 1.5rem; border-bottom: 2px solid #E0218A; padding-bottom: 0.5rem;">
-            🔑 Key Contributing Factors
-        </h3>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    """, unsafe_allow_html=True)
-    
-    # Factor 1: Stress
-    stress = user_data.get('stress_levels', 5)
-    stress_color = "#FF6EC7" if stress < 4 else ("#E0218A" if stress < 7 else "#FF1493")
-    
-    # Factor 2: Cravings
-    cravings = user_data.get('craving_intensity', 5)
-    craving_color = "#FF6EC7" if cravings < 4 else ("#E0218A" if cravings < 7 else "#FF1493")
-    
-    # Factor 3: Support
-    support = user_data.get('support', 'None')
-    if isinstance(support, str):
-        support_list = [s.strip() for s in support.split(',')]
-    else:
-        support_list = [support] if support else ['None']
-    
-    support_factor = len(support_list) if 'None' not in support_list else 0
-    support_color = "#FF1493" if support_factor == 0 else ("#E0218A" if support_factor < 3 else "#FF6EC7")
-    
-    # Factor 4: Self-Esteem
-    self_esteem = user_data.get('self_esteem', 6)
-    esteem_percent = (self_esteem / 12) * 100
-    esteem_color = "#FF1493" if esteem_percent < 33 else ("#E0218A" if esteem_percent < 66 else "#FF6EC7")
-    
-    st.markdown(f"""
-        <div style="background: #1a1a1a; padding: 1.2rem; border-radius: 10px; border-left: 3px solid {stress_color};">
-            <div style="color: #FFB6D9; font-size: 0.9em; margin-bottom: 0.5rem;">Stress Level</div>
-            <div style="color: {stress_color}; font-size: 1.5em; font-weight: 700;">{stress}/10</div>
-        </div>
-        
-        <div style="background: #1a1a1a; padding: 1.2rem; border-radius: 10px; border-left: 3px solid {craving_color};">
-            <div style="color: #FFB6D9; font-size: 0.9em; margin-bottom: 0.5rem;">Craving Intensity</div>
-            <div style="color: {craving_color}; font-size: 1.5em; font-weight: 700;">{cravings}/10</div>
-        </div>
-        
-        <div style="background: #1a1a1a; padding: 1.2rem; border-radius: 10px; border-left: 3px solid {support_color};">
-            <div style="color: #FFB6D9; font-size: 0.9em; margin-bottom: 0.5rem;">Support Sources</div>
-            <div style="color: {support_color}; font-size: 1.5em; font-weight: 700;">{support_factor}</div>
-        </div>
-        
-        <div style="background: #1a1a1a; padding: 1.2rem; border-radius: 10px; border-left: 3px solid {esteem_color};">
-            <div style="color: #FFB6D9; font-size: 0.9em; margin-bottom: 0.5rem;">Self-Esteem</div>
-            <div style="color: {esteem_color}; font-size: 1.5em; font-weight: 700;">{self_esteem}/12</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("</div></div>", unsafe_allow_html=True)
-    
-    # Personalized Guidance Section
-    st.markdown("""
-    <div class="result-card">
-        <h3 style="color: #ffffff; margin-bottom: 1.5rem; border-bottom: 2px solid #E0218A; padding-bottom: 0.5rem;">
-            💝 Personalized Guidance
-        </h3>
-    """, unsafe_allow_html=True)
-    
-    if relapse_phase == 'low':
-        st.markdown("""
-        <div style="background: rgba(255, 110, 199, 0.1); padding: 1.5rem; border-radius: 12px;">
-            <h4 style="color: #FF6EC7; margin-bottom: 1rem;">🎉 You're Doing Amazing!</h4>
-            <p style="color: #FFB6D9; line-height: 1.6; margin-bottom: 1rem;">
-            Your assessment shows you're at a <b>low risk</b> of relapse. This is a testament to your 
-            hard work and commitment to recovery. Keep up the excellent progress!
-            </p>
-            
-            <div style="background: rgba(255, 110, 199, 0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                <p style="color: #FF6EC7; font-weight: 600; margin-bottom: 0.5rem;">🌸 Recommended Actions:</p>
-                <ul style="color: #FFB6D9; padding-left: 1.2rem;">
-                    <li>Continue practicing your healthy coping strategies</li>
-                    <li>Maintain regular contact with your support system</li>
-                    <li>Celebrate your milestones and achievements</li>
-                    <li>Stay mindful of potential triggers as they arise</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    elif relapse_phase == 'medium':
-        st.markdown("""
-        <div style="background: rgba(224, 33, 138, 0.1); padding: 1.5rem; border-radius: 12px;">
-            <h4 style="color: #E0218A; margin-bottom: 1rem;">⚠️ Increased Awareness Needed</h4>
-            <p style="color: #FFB6D9; line-height: 1.6; margin-bottom: 1rem;">
-            Your assessment indicates a <b>medium risk</b> of relapse. This is a good time to 
-            strengthen your coping strategies and increase your support network contact.
-            </p>
-            
-            <div style="background: rgba(224, 33, 138, 0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                <p style="color: #E0218A; font-weight: 600; margin-bottom: 0.5rem;">🌸 Recommended Actions:</p>
-                <ul style="color: #FFB6D9; padding-left: 1.2rem;">
-                    <li>Increase contact with your support system this week</li>
-                    <li>Practice mindfulness or meditation for 10 minutes daily</li>
-                    <li>Avoid known triggers when possible</li>
-                    <li>Consider speaking with a therapist or counselor</li>
-                    <li>Journal about your feelings and cravings</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    else:  # high
-        st.markdown("""
-        <div style="background: rgba(255, 20, 147, 0.1); padding: 1.5rem; border-radius: 12px;">
-            <h4 style="color: #FF1493; margin-bottom: 1rem;">🚨 Immediate Action Recommended</h4>
-            <p style="color: #FFB6D9; line-height: 1.6; margin-bottom: 1rem;">
-            Your assessment shows a <b>high risk</b> of relapse. Please know that this doesn't 
-            mean you've failed—it means you need extra support right now.
-            </p>
-            
-            <div style="background: rgba(255, 20, 147, 0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                <p style="color: #FF1493; font-weight: 600; margin-bottom: 0.5rem;">🌸 Immediate Actions:</p>
-                <ul style="color: #FFB6D9; padding-left: 1.2rem;">
-                    <li><b>Contact your support system immediately</b></li>
-                    <li>Avoid all situations that could trigger substance use</li>
-                    <li>Reach out to a professional or treatment provider</li>
-                    <li>Use crisis resources if needed (listed below)</li>
-                    <li>Practice deep breathing and grounding techniques</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Emergency resources
-        st.markdown("""
-        <div class="warning-box" style="margin-top: 1.5rem;">
-            <h4 style="color: #FF1493; margin-bottom: 0.5rem;">📞 Emergency Support Resources:</h4>
-            <p style="margin: 0.25em 0; color: #FFB6D9;">• <b>National Helpline:</b> 1-800-662-HELP (4357) - 24/7 free, confidential treatment referral</p>
-            <p style="margin: 0.25em 0; color: #FFB6D9;">• <b>Crisis Text Line:</b> Text HOME to 741741 - Free 24/7 crisis support</p>
-            <p style="margin: 0.25em 0; color: #FFB6D9;">• <b>Emergency:</b> Call 911 or go to the nearest emergency room</p>
-            <p style="margin: 0.25em 0; color: #FFB6D9;">• <b>988 Suicide & Crisis Lifeline:</b> Call or text 988</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    # Final encouragement
-    st.markdown("""
-    <div style="text-align: center; margin: 3rem 0; padding: 2rem; background: linear-gradient(135deg, rgba(224, 33, 138, 0.1) 0%, rgba(255, 110, 199, 0.1) 100%); 
-                border-radius: 15px; border: 1px solid rgba(224, 33, 138, 0.3);">
-        <p style="font-size: 1.3em; font-weight: 600; color: #FF6EC7; margin-bottom: 0.5rem;">
-        Recovery is a journey of courage, not perfection.
-        </p>
-        <p style="color: #FFB6D9; max-width: 600px; margin: 0 auto;">
-        Every step you take toward self-awareness and healing matters. 
-        You've shown incredible strength by completing this assessment.
-        </p>
-        <p style="font-size: 1.5em; font-weight: 700; color: #FF6EC7; margin-top: 1rem;">
-        You've got this! 💝
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Action buttons
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button("📥 Save Results", use_container_width=True):
-            st.success("Results have been saved to sophia_dataset.csv")
+        if 'Other' in selected_conditions:
+            other_condition = st.text_input("Please share:", key="other_mental")
+            if other_condition:
+                selected_conditions.remove('Other')
+                selected_conditions.append(other_condition)
     
     with col2:
-        if st.button("🔄 New Assessment", use_container_width=True):
-            reset_app()
+        st.markdown('<h4>Current Life Challenges</h4>', unsafe_allow_html=True)
+        stressor_options = [
+            'Financial stress',
+            'Work or school pressure',
+            'Relationship difficulties',
+            'Health concerns',
+            'Legal situations',
+            'Recent loss or grief',
+            'None significant currently'
+        ]
+        
+        selected_stressors = st.multiselect(
+            "What challenges are you facing right now?",
+            stressor_options,
+            key="life_stressors"
+        )
     
-    with col3:
-        if st.button("🏠 Return Home", use_container_width=True):
-            reset_app()
+    mental_conditions = ', '.join(selected_conditions) if selected_conditions else 'None reported'
+    life_stressors = ', '.join(selected_stressors) if selected_stressors else 'None significant'
+    
+    return mental_conditions, life_stressors
 
-# =========================================================
-# FOOTER
-# =========================================================
-st.markdown("""
-<div style="text-align: center; color: #666666; font-size: 0.9em; margin-top: 3em; padding-top: 1em; border-top: 1px solid #333333;">
-🌸 <b>Sophia</b> is a relapse prevention tool. This is not medical advice. If you're in crisis, please contact a healthcare professional or emergency services.
-</div>
-""", unsafe_allow_html=True)
+def render_support_system():
+    """Support system with compassionate framing"""
+    st.markdown("""
+    <div class="therapy-note">
+        <p>Connection is healing. Who or what supports you in this journey?</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="subsection-divider-container"><hr style="border: 0; height: 1px; background: #3A425C; margin: 30px 0;"></div>', unsafe_allow_html=True)
+    
+    support_options = [
+        'Family',
+        'Friends',
+        'Support group (AA/NA/etc.)',
+        'Therapist or counselor',
+        'Partner or spouse',
+        'Online community',
+        'Medical team',
+        'Building my support system'
+    ]
+    
+    support = st.selectbox(
+        "Who is part of your support network?",
+        ['Select your primary support...'] + support_options,
+        key="support"
+    )
+    
+    return support if support != 'Select your primary support...' else 'Building support system'
+
+# ==================== MAIN APPLICATION ====================
+# ... (keep all the imports, constants, and functions above exactly as they are) ...
+
+# ==================== MAIN APPLICATION ====================
+def main():
+    # Initialize session state
+    if 'assessment_complete' not in st.session_state:
+        st.session_state.assessment_complete = False
+    if 'user_data' not in st.session_state:
+        st.session_state.user_data = {}
+    
+    # Load ML models
+    with st.spinner("Preparing your personalized support system..."):
+        clf_model, reg_model, encoder, categorical_cols, numerical_cols = load_and_train_models()
+    
+    # Sidebar with compassionate tone
+    with st.sidebar:
+        st.image("https://img.icons8.com/color/96/000000/heart-health.png", width=80)
+        st.markdown("## Sophia 🌸")
+        st.markdown("### Your Compassionate Recovery Companion")
+        st.markdown("---")
+        
+        st.markdown("""
+        <div class="card">
+            <h4>🌟 How This Works</h4>
+            <p>This is your safe space for:</p>
+            <ul>
+                <li><strong>Honest self-reflection</strong></li>
+                <li><strong>Personalized insights</strong></li>
+                <li><strong>Compassionate guidance</strong></li>
+                <li><strong>AI-powered support</strong></li>
+            </ul>
+            <p>All responses are confidential and secure.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="card">
+            <h4>🚨 Immediate Support</h4>
+            <div class="info-note">
+                <p><strong>You are not alone. Help is available:</strong></p>
+                <p>📞 <strong>SAMHSA</strong>: 1-800-662-HELP (4357)</p>
+                <p>💬 <strong>Crisis Text Line</strong>: Text HOME to 741741</p>
+                <p>🌐 <strong>Online support</strong>: Available 24/7</p>
+                <p><em>Reaching out is an act of courage.</em></p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🔄 Start Fresh", type="primary"):
+            st.session_state.assessment_complete = False
+            st.session_state.user_data = {}
+            st.rerun()
+    
+    # Main content
+    render_welcome()
+    
+    # Create tabs
+    tab1, tab2, tab3 = st.tabs(["🕊️ Assessment", "📖 Your Insights", "🌱 Your Journey"])
+    
+    with tab1:
+        if not st.session_state.assessment_complete:
+            st.markdown("""
+            <div class="card">
+                <h3>Let's Begin Our Conversation</h3>
+                <p class="compassionate-text">
+                    I'll guide you through some questions about your experiences, feelings, and current situation. 
+                    There are no right or wrong answers—only your truth.
+                </p>
+                <p class="compassionate-text">
+                    Take this at your own pace. You can pause anytime, and all your responses are saved privately.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # =============== CRITICAL FIX ===============
+            # Section 1: Getting to Know You - OUTSIDE the form
+            render_section_divider("Getting to Know You")
+            basic_info = render_basic_info()
+            
+            # Section 2: Understanding Your Experience - OUTSIDE the form
+            render_section_divider("Understanding Your Experience")
+            addiction_type = render_addiction_info()
+            
+            # =============== NOW START THE FORM ===============
+            # Assessment form (rest of the sections)
+            with st.form("sophia_assessment"):
+                user_data = {}
+                
+                # Add the basic info and addiction type that we collected OUTSIDE the form
+                user_data.update(basic_info)
+                user_data['addiction_type'] = addiction_type
+                
+                # Progress note
+                if user_data.get('first_name'):
+                    render_compassionate_note(f"Thank you for sharing that, {user_data['first_name']}. Let's continue with care.")
+                
+                if addiction_type:
+                    render_compassionate_note("Thank you for trusting me with this information. This helps me understand your journey better.")
+                
+                # Section 3: Emotional Landscape
+                render_section_divider("Your Emotional Landscape")
+                triggers = render_triggers_section()
+                user_data['triggers'] = triggers
+                
+                cravings, craving_intensity = render_cravings_section()
+                user_data['cravings'] = cravings
+                user_data['craving_intensity'] = craving_intensity
+                
+                render_compassionate_note("Noticing these patterns is powerful work. You're building important self-awareness.")
+                
+                # Section 4: Current Environment
+                render_section_divider("Your Current Environment")
+                accessibility = render_accessibility_section()
+                user_data['accessibility_or_exposure'] = accessibility
+                
+                render_compassionate_note("Understanding your environment helps us create practical support strategies.")
+                
+                # Section 5: Health & Wellness
+                render_section_divider("Health & Wellness")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    medication = render_medication_section()
+                    user_data['medication'] = medication
+                
+                with col2:
+                    stress = render_stress_section()
+                    user_data['stress_levels'] = stress
+                
+                render_compassionate_note("Your health journey is unique, and every piece matters.")
+                
+                # Section 6: Self & Identity
+                render_section_divider("Self & Identity")
+                self_esteem = render_self_esteem_section()
+                user_data['self_esteem'] = self_esteem
+                
+                render_compassionate_note("Your relationship with yourself is at the heart of healing. Thank you for exploring this.")
+                
+                # Section 7: Mental Health & Challenges
+                render_section_divider("Mental Health & Current Challenges")
+                mental_health, life_stressors = render_mental_health_section()
+                user_data['mental_health_conditions'] = mental_health
+                user_data['life_stressors'] = life_stressors
+                
+                # Section 8: Support & Connection
+                render_section_divider("Support & Connection")
+                support = render_support_system()
+                user_data['support'] = support
+                
+                render_compassionate_note("Connection is healing. Thank you for sharing about your support network.")
+                
+                # Submit button
+                submit_col1, submit_col2, submit_col3 = st.columns([1, 2, 1])
+                with submit_col2:
+                    submitted = st.form_submit_button(
+                        "🌸 Generate Your Personalized Insights",
+                        type="primary",
+                        use_container_width=True
+                    )
+                
+                if submitted:
+                    # Validate
+                    required_fields = [
+                        (user_data['first_name'], "First name"),
+                        (user_data['surname'], "Last name"),
+                        (user_data['gender'], "Gender identity"),
+                        (user_data['addiction_type'], "Addiction information"),
+                        (user_data['support'], "Support system")
+                    ]
+                    
+                    missing_fields = [name for value, name in required_fields if not value]
+                    
+                    if missing_fields:
+                        st.error(f"Please complete: {', '.join(missing_fields)}")
+                    else:
+                        # Make predictions
+                        with st.spinner("Reflecting on your journey with compassion..."):
+                            # Predict relapse phase
+                            relapse_phase = classify_relapse(
+                                user_data, clf_model, encoder, categorical_cols, numerical_cols
+                            )
+                            
+                            # Predict relapse probability
+                            relapse_prob = predict_relapse_probability(
+                                user_data, reg_model, encoder, categorical_cols, numerical_cols
+                            )
+                            
+                            # Add predictions
+                            user_data['relapse_phase'] = relapse_phase
+                            user_data['prob_of_relapse'] = relapse_prob
+                            
+                            # Store data
+                            try:
+                                store_data(user_data)
+                            except Exception as e:
+                                st.warning(f"Note: Could not save to local file. {e}")
+                            
+                            # Update session state
+                            st.session_state.user_data = user_data
+                            st.session_state.assessment_complete = True
+                            
+                            st.success("🌸 Thank you for sharing your journey. Your insights are ready.")
+                            st.balloons()
+                            st.rerun()
+        
+        else:
+            # Show completion message if assessment is already complete
+            st.markdown("""
+            <div class="therapy-note">
+                <h3>🌸 Assessment Complete</h3>
+                <p>Your assessment has been completed. You can view your personalized insights in the "Your Insights" tab, 
+                or track your journey in the "Your Journey" tab.</p>
+                <p>If you'd like to start a new assessment, click "Start Fresh" in the sidebar.</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # ... (keep the rest of the tab2 and tab3 code exactly as it is) ...
+
+# ==================== RUN APPLICATION ====================
+if __name__ == "__main__":
+    main()
